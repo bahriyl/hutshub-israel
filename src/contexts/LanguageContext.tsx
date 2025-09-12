@@ -1,0 +1,419 @@
+import { createContext, useContext, useState, ReactNode } from 'react';
+
+export type Language = 'he' | 'en';
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;
+  isRTL: boolean;
+}
+
+const translations = {
+  he: {
+    // Layout
+    'layout.become_host': 'הפוך למארח',
+    'layout.search': 'חיפוש',
+    'layout.favorites': 'מועדפים',
+    'layout.host': 'מארח',
+    'layout.profile': 'פרופיל',
+    
+    // Search Screen
+    'search.where_to_go': 'לאן תרצו לטייל?',
+    'search.where': 'איפה',
+    'search.when': 'מתי',
+    'search.how_many': 'כמה',
+    'search.filters': 'מסננים',
+    'search.properties_count': 'צימרים',
+    'search.per_night': '/ לילה',
+    'search.reviews': 'ביקורות',
+    'search.new': 'חדש',
+    
+    // Categories
+    'category.romantic': 'רומנטי',
+    'category.family': 'משפחתי',
+    'category.dogs': 'עם כלבים',
+    'category.luxury': 'יוקרה',
+    'category.view': 'נוף',
+    'category.jacuzzi': 'ג\'קוזי',
+    
+    // Property Detail
+    'property.up_to_guests': 'עד {count} אורחים',
+    'property.min_nights': 'מינימום {count} לילות',
+    'property.what_offers': 'מה המקום מציע',
+    'property.host': 'מארח: {name}',
+    'property.verified': 'מאומת',
+    'property.responds_within': 'מגיב {time}',
+    'property.within_hour': 'תוך שעה',
+    'property.contact': 'צור קשר',
+    'property.reviews_title': 'ביקורות ({count})',
+    'property.show_all': 'הצג הכל',
+    'property.book_now': 'הזמן עכשיו',
+    
+    // Amenities
+    'amenity.private_jacuzzi': 'ג\'קוזי פרטי',
+    'amenity.pool': 'בריכה',
+    'amenity.bbq': 'ברביקיו',
+    'amenity.mamad': 'מט"מ',
+    'amenity.kosher_kitchen': 'מטבח כשר',
+    'amenity.wifi': 'אינטרנט אלחוטי',
+    'amenity.parking': 'חניה חינם',
+    'amenity.ac': 'מזגן',
+    'amenity.heating': 'חימום',
+    'amenity.terrace': 'מרפסת/גינה',
+    'amenity.pet_friendly': 'ידידותי לחיות מחמד',
+    'amenity.no_stairs': 'ללא מדרגות',
+    'amenity.view': 'נוף',
+    'amenity.quiet': 'שקט',
+    'amenity.service_24_7': 'שירות 24/7',
+    
+    // Booking Flow
+    'booking.dates_guests': 'תאריכים ואורחים',
+    'booking.contact_details': 'פרטי יצירת קשר',
+    'booking.payment': 'תשלום',
+    'booking.confirmation': 'אישור',
+    'booking.select_dates': 'בחר תאריכים',
+    'booking.checkin': 'כניסה',
+    'booking.checkout': 'יציאה',
+    'booking.guests': 'אורחים',
+    'booking.full_name': 'שם מלא',
+    'booking.phone': 'טלפון',
+    'booking.email': 'אימייל',
+    'booking.important_info': 'חשוב לדעת',
+    'booking.cancellation_policy': 'ביטול חינם עד 24 שעות לפני התאריך',
+    'booking.checkin_time': 'צ\'ק-אין: 16:00 - 20:00',
+    'booking.checkout_time': 'צ\'ק-אאוט: עד 11:00',
+    'booking.smoking_policy': 'מותר עישון רק במרפסת',
+    'booking.select_payment': 'בחר אמצעי תשלום',
+    'booking.credit_card': 'כרטיס אשראי',
+    'booking.cancellation_terms': 'תנאי ביטול',
+    'booking.cancellation_description': 'ביטול חינם עד 24 שעות לפני התאריך. לאחר מכן יחויב דמי ביטול של 50% מעלות ההזמנה.',
+    'booking.confirmed': 'ההזמנה אושרה!',
+    'booking.confirmation_sent': 'קיבלת אישור ההזמנה במייל ובהודעת WhatsApp',
+    'booking.booking_details': 'פרטי ההזמנה',
+    'booking.booking_number': 'מספר הזמנה:',
+    'booking.dates': 'תאריכים:',
+    'booking.total': 'סה"כ:',
+    'booking.price_summary': 'סיכום מחירים',
+    'booking.nights': 'לילות',
+    'booking.cleaning_fee': 'דמי ניקיון',
+    'booking.service_fee': 'דמי שירות',
+    'booking.continue': 'המשך',
+    'booking.pay': 'שלם',
+    'booking.finish': 'סיום',
+    'booking.whatsapp': 'שלח פרטים בWhatsApp',
+    'booking.download_pdf': 'הורד אישור PDF',
+    
+    // Host Dashboard
+    'host.hello': 'שלום, {name}',
+    'host.add_property': 'הוסף צימר',
+    'host.trial_period': 'תקופת ניסיון',
+    'host.trial_days_left': 'נותרו {days} ימים בתקופת הניסיון החינמית',
+    'host.upgrade_now': 'שדרג עכשיו',
+    'host.overview': 'סקירה',
+    'host.my_properties': 'הנכסים שלי',
+    'host.bookings': 'הזמנות',
+    'host.calendar': 'לוח שנה',
+    'host.monthly_bookings': 'הזמנות החודש',
+    'host.monthly_revenue': 'הכנסות החודש',
+    'host.occupancy': 'תפוסה',
+    'host.avg_rating': 'דירוג ממוצע',
+    'host.recent_bookings': 'הזמנות אחרונות',
+    'host.confirmed': 'מאושר',
+    'host.pending': 'ממתין',
+    'host.cancelled': 'בוטל',
+    'host.price_per_night': 'מחיר ללילה',
+    'host.revenue': 'הכנסות',
+    'host.rating': 'דירוג',
+    'host.active': 'פעיל',
+    'host.pending_approval': 'ממתין לאישור',
+    'host.manage_calendar': 'ניהול לוח שנה',
+    'host.no_properties': 'עדיין אין לך צימרים',
+    'host.no_properties_desc': 'התחל להרוויח כסף על ידי השכרת הצימר שלך',
+    'host.add_first_property': 'הוסף צימר ראשון',
+    'host.approve_booking': 'אשר הזמנה',
+    'host.reject_booking': 'דחה',
+    'host.calendar_coming_soon': 'לוח השנה יגיע בקרוב',
+    'host.calendar_description': 'כאן תוכל לנהל את זמינות הצימרים שלך',
+    
+    // Add Property
+    'add_property.basic_details': 'פרטי בסיס',
+    'add_property.photos': 'תמונות',
+    'add_property.amenities': 'שירותים',
+    'add_property.price': 'מחיר',
+    'add_property.finish': 'סיום',
+    'add_property.property_details': 'פרטי הצימר',
+    'add_property.title': 'כותרת',
+    'add_property.title_placeholder': 'לדוגמה: צימר רומנטי בגליל',
+    'add_property.location': 'מיקום',
+    'add_property.location_placeholder': 'עיר או אזור',
+    'add_property.description': 'תיאור',
+    'add_property.description_placeholder': 'תאר את הצימר שלך - מה מיוחד בו, איך הוא נראה, מה יש באזור...',
+    'add_property.max_guests': 'מספר אורחים מקסימלי',
+    'add_property.min_nights': 'מינימום לילות',
+    'add_property.select': 'בחר',
+    'add_property.add_photos': 'הוסף תמונות',
+    'add_property.photos_description': 'הוסף לפחות 3 תמונות איכותיות של הצימר. התמונה הראשונה תשמש כתמונה ראשית.',
+    'add_property.drag_photos': 'גרור תמונות לכאן או לחץ לבחירה',
+    'add_property.select_photos': 'בחר תמונות',
+    'add_property.photo_tips': 'טיפים לתמונות מושלמות',
+    'add_property.photo_tip_1': '• צלם באור טבעי, עדיף בשעות הבוקר',
+    'add_property.photo_tip_2': '• הקפד על ניקיון וסדר מושלם',
+    'add_property.photo_tip_3': '• כלול תמונות של כל החדרים והאזורים',
+    'add_property.photo_tip_4': '• הצג את השירותים המיוחדים (ג\'קוזי, נוף וכו\')',
+    'add_property.what_amenities': 'איזה שירותים יש בצימר?',
+    'add_property.amenities_description': 'בחר את כל השירותים והמתקנים הזמינים בצימר שלך',
+    'add_property.popular_amenities': 'שירותים פופולאריים',
+    'add_property.popular_amenities_desc': 'ג\'קוזי, בריכה וברביקיו הם השירותים המבוקשים ביותר על ידי אורחים',
+    'add_property.set_price': 'קבע מחיר',
+    'add_property.price_description': 'תוכל לשנות את המחיר בכל עת. מחיר תחרותי יביא יותר הזמנות.',
+    'add_property.price_per_night': 'מחיר ללילה (₪)',
+    'add_property.area_prices': 'מחירים באזור',
+    'add_property.similar_properties': 'צימרים דומים באזור:',
+    'add_property.average_price': 'מחיר ממוצע:',
+    'add_property.no_commission': 'עמלות ודמי שירות',
+    'add_property.no_commission_desc': 'Hutshub לא גובה עמלה מההזמנות! אתה מקבל 100% מהתשלום. ההכנסה היחידה שלנו היא מדמי המנוי החודשי.',
+    'add_property.success': 'הצימר נוסף בהצלחה!',
+    'add_property.review_process': 'הצימר שלך נשלח לבדיקה ויפורסם תוך 24 שעות',
+    'add_property.what_happens_now': 'מה קורה עכשיו?',
+    'add_property.quality_check': 'בדיקת איכות',
+    'add_property.quality_check_desc': 'הצוות שלנו בודק את הפרטים והתמונות',
+    'add_property.publish': 'פרסום',
+    'add_property.publish_desc': 'הצימר יופיע בתוצאות החיפוש',
+    'add_property.start_earning': 'התחל להרוויח',
+    'add_property.start_earning_desc': 'קבל הזמנות ותתחיל להרוויח כסף',
+    'add_property.back_to_dashboard': 'חזור לדשבורד',
+    'add_property.add_another': 'הוסף צימר נוסף',
+    
+    // Placeholders and other
+    'favorites.title': 'המועדפים שלי',
+    'favorites.empty': 'עדיין לא שמרת צימרים למועדפים',
+    'profile.title': 'הפרופיל שלי',
+    'profile.description': 'ניהול פרופיל והזמנות',
+    'common.required': '*',
+    'common.nights': 'לילות',
+    'common.night': 'לילה',
+    'common.guests': 'אורחים',
+    'common.guest': 'אורח'
+  },
+  en: {
+    // Layout
+    'layout.become_host': 'Become a Host',
+    'layout.search': 'Search',
+    'layout.favorites': 'Favorites',
+    'layout.host': 'Host',
+    'layout.profile': 'Profile',
+    
+    // Search Screen
+    'search.where_to_go': 'Where would you like to go?',
+    'search.where': 'Where',
+    'search.when': 'When',
+    'search.how_many': 'How many',
+    'search.filters': 'Filters',
+    'search.properties_count': 'properties',
+    'search.per_night': '/ night',
+    'search.reviews': 'reviews',
+    'search.new': 'New',
+    
+    // Categories
+    'category.romantic': 'Romantic',
+    'category.family': 'Family-friendly',
+    'category.dogs': 'Dog-friendly',
+    'category.luxury': 'Luxury',
+    'category.view': 'View',
+    'category.jacuzzi': 'Jacuzzi',
+    
+    // Property Detail
+    'property.up_to_guests': 'Up to {count} guests',
+    'property.min_nights': 'Minimum {count} nights',
+    'property.what_offers': 'What this place offers',
+    'property.host': 'Host: {name}',
+    'property.verified': 'Verified',
+    'property.responds_within': 'Responds {time}',
+    'property.within_hour': 'within an hour',
+    'property.contact': 'Contact',
+    'property.reviews_title': 'Reviews ({count})',
+    'property.show_all': 'Show all',
+    'property.book_now': 'Book Now',
+    
+    // Amenities
+    'amenity.private_jacuzzi': 'Private Jacuzzi',
+    'amenity.pool': 'Pool',
+    'amenity.bbq': 'BBQ',
+    'amenity.mamad': 'Safe Room',
+    'amenity.kosher_kitchen': 'Kosher Kitchen',
+    'amenity.wifi': 'Wi-Fi',
+    'amenity.parking': 'Free Parking',
+    'amenity.ac': 'Air Conditioning',
+    'amenity.heating': 'Heating',
+    'amenity.terrace': 'Terrace/Garden',
+    'amenity.pet_friendly': 'Pet Friendly',
+    'amenity.no_stairs': 'No Stairs',
+    'amenity.view': 'View',
+    'amenity.quiet': 'Quiet',
+    'amenity.service_24_7': '24/7 Service',
+    
+    // Booking Flow
+    'booking.dates_guests': 'Dates & Guests',
+    'booking.contact_details': 'Contact Details',
+    'booking.payment': 'Payment',
+    'booking.confirmation': 'Confirmation',
+    'booking.select_dates': 'Select dates',
+    'booking.checkin': 'Check-in',
+    'booking.checkout': 'Check-out',
+    'booking.guests': 'Guests',
+    'booking.full_name': 'Full Name',
+    'booking.phone': 'Phone',
+    'booking.email': 'Email',
+    'booking.important_info': 'Important to know',
+    'booking.cancellation_policy': 'Free cancellation up to 24 hours before the date',
+    'booking.checkin_time': 'Check-in: 4:00 PM - 8:00 PM',
+    'booking.checkout_time': 'Check-out: until 11:00 AM',
+    'booking.smoking_policy': 'Smoking allowed only on the terrace',
+    'booking.select_payment': 'Select payment method',
+    'booking.credit_card': 'Credit Card',
+    'booking.cancellation_terms': 'Cancellation terms',
+    'booking.cancellation_description': 'Free cancellation up to 24 hours before the date. After that, a 50% cancellation fee will be charged.',
+    'booking.confirmed': 'Booking confirmed!',
+    'booking.confirmation_sent': 'You received booking confirmation via email and WhatsApp',
+    'booking.booking_details': 'Booking details',
+    'booking.booking_number': 'Booking number:',
+    'booking.dates': 'Dates:',
+    'booking.total': 'Total:',
+    'booking.price_summary': 'Price summary',
+    'booking.nights': 'nights',
+    'booking.cleaning_fee': 'Cleaning fee',
+    'booking.service_fee': 'Service fee',
+    'booking.continue': 'Continue',
+    'booking.pay': 'Pay',
+    'booking.finish': 'Finish',
+    'booking.whatsapp': 'Send details via WhatsApp',
+    'booking.download_pdf': 'Download PDF confirmation',
+    
+    // Host Dashboard
+    'host.hello': 'Hello, {name}',
+    'host.add_property': 'Add Property',
+    'host.trial_period': 'Trial Period',
+    'host.trial_days_left': '{days} days left in free trial',
+    'host.upgrade_now': 'Upgrade Now',
+    'host.overview': 'Overview',
+    'host.my_properties': 'My Properties',
+    'host.bookings': 'Bookings',
+    'host.calendar': 'Calendar',
+    'host.monthly_bookings': 'This Month\'s Bookings',
+    'host.monthly_revenue': 'This Month\'s Revenue',
+    'host.occupancy': 'Occupancy',
+    'host.avg_rating': 'Average Rating',
+    'host.recent_bookings': 'Recent Bookings',
+    'host.confirmed': 'Confirmed',
+    'host.pending': 'Pending',
+    'host.cancelled': 'Cancelled',
+    'host.price_per_night': 'Price per night',
+    'host.revenue': 'Revenue',
+    'host.rating': 'Rating',
+    'host.active': 'Active',
+    'host.pending_approval': 'Pending approval',
+    'host.manage_calendar': 'Manage Calendar',
+    'host.no_properties': 'You don\'t have any properties yet',
+    'host.no_properties_desc': 'Start earning money by renting out your property',
+    'host.add_first_property': 'Add your first property',
+    'host.approve_booking': 'Approve booking',
+    'host.reject_booking': 'Reject',
+    'host.calendar_coming_soon': 'Calendar coming soon',
+    'host.calendar_description': 'Here you\'ll be able to manage your property availability',
+    
+    // Add Property
+    'add_property.basic_details': 'Basic Details',
+    'add_property.photos': 'Photos',
+    'add_property.amenities': 'Amenities',
+    'add_property.price': 'Price',
+    'add_property.finish': 'Finish',
+    'add_property.property_details': 'Property details',
+    'add_property.title': 'Title',
+    'add_property.title_placeholder': 'e.g. Romantic cabin in Galilee',
+    'add_property.location': 'Location',
+    'add_property.location_placeholder': 'City or region',
+    'add_property.description': 'Description',
+    'add_property.description_placeholder': 'Describe your property - what\'s special about it, how it looks, what\'s in the area...',
+    'add_property.max_guests': 'Maximum number of guests',
+    'add_property.min_nights': 'Minimum nights',
+    'add_property.select': 'Select',
+    'add_property.add_photos': 'Add photos',
+    'add_property.photos_description': 'Add at least 3 high-quality photos of your property. The first photo will be used as the main image.',
+    'add_property.drag_photos': 'Drag photos here or click to select',
+    'add_property.select_photos': 'Select photos',
+    'add_property.photo_tips': 'Tips for perfect photos',
+    'add_property.photo_tip_1': '• Shoot in natural light, preferably in the morning',
+    'add_property.photo_tip_2': '• Ensure perfect cleanliness and order',
+    'add_property.photo_tip_3': '• Include photos of all rooms and areas',
+    'add_property.photo_tip_4': '• Show special amenities (jacuzzi, view, etc.)',
+    'add_property.what_amenities': 'What amenities does your property have?',
+    'add_property.amenities_description': 'Select all the amenities and facilities available in your property',
+    'add_property.popular_amenities': 'Popular amenities',
+    'add_property.popular_amenities_desc': 'Jacuzzi, pool, and BBQ are the most requested amenities by guests',
+    'add_property.set_price': 'Set price',
+    'add_property.price_description': 'You can change the price anytime. A competitive price will bring more bookings.',
+    'add_property.price_per_night': 'Price per night (₪)',
+    'add_property.area_prices': 'Area prices',
+    'add_property.similar_properties': 'Similar properties in the area:',
+    'add_property.average_price': 'Average price:',
+    'add_property.no_commission': 'Fees and service charges',
+    'add_property.no_commission_desc': 'Hutshub doesn\'t charge commission on bookings! You receive 100% of the payment. Our only income is from the monthly subscription fee.',
+    'add_property.success': 'Property added successfully!',
+    'add_property.review_process': 'Your property has been submitted for review and will be published within 24 hours',
+    'add_property.what_happens_now': 'What happens now?',
+    'add_property.quality_check': 'Quality check',
+    'add_property.quality_check_desc': 'Our team reviews the details and photos',
+    'add_property.publish': 'Publish',
+    'add_property.publish_desc': 'The property will appear in search results',
+    'add_property.start_earning': 'Start earning',
+    'add_property.start_earning_desc': 'Receive bookings and start earning money',
+    'add_property.back_to_dashboard': 'Back to dashboard',
+    'add_property.add_another': 'Add another property',
+    
+    // Placeholders and other
+    'favorites.title': 'My Favorites',
+    'favorites.empty': 'You haven\'t saved any properties to favorites yet',
+    'profile.title': 'My Profile',
+    'profile.description': 'Manage profile and bookings',
+    'common.required': '*',
+    'common.nights': 'nights',
+    'common.night': 'night',
+    'common.guests': 'guests',
+    'common.guest': 'guest'
+  }
+};
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguage] = useState<Language>('he');
+  
+  const t = (key: string, params?: Record<string, string | number>) => {
+    let text = translations[language][key as keyof typeof translations[Language]] || key;
+    
+    if (params) {
+      Object.entries(params).forEach(([paramKey, value]) => {
+        text = text.replace(`{${paramKey}}`, String(value));
+      });
+    }
+    
+    return text;
+  };
+  
+  const isRTL = language === 'he';
+  
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t, isRTL }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+}
