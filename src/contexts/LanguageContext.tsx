@@ -17,7 +17,7 @@ const translations = {
     'layout.favorites': 'מועדפים',
     'layout.host': 'מארח',
     'layout.profile': 'פרופיל',
-    
+
     // Search Screen
     'search.where_to_go': 'לאן תרצו לטייל?',
     'search.where': 'איפה',
@@ -28,7 +28,9 @@ const translations = {
     'search.per_night': '/ לילה',
     'search.reviews': 'ביקורות',
     'search.new': 'חדש',
-    
+    'search.clear': 'נקה',
+    'search.guests': 'אורחים',
+
     // Categories
     'category.romantic': 'רומנטי',
     'category.family': 'משפחתי',
@@ -36,7 +38,7 @@ const translations = {
     'category.luxury': 'יוקרה',
     'category.view': 'נוף',
     'category.jacuzzi': 'ג\'קוזי',
-    
+
     // Property Detail
     'property.up_to_guests': 'עד {count} אורחים',
     'property.min_nights': 'מינימום {count} לילות',
@@ -49,7 +51,7 @@ const translations = {
     'property.reviews_title': 'ביקורות ({count})',
     'property.show_all': 'הצג הכל',
     'property.book_now': 'הזמן עכשיו',
-    
+
     // Amenities
     'amenity.private_jacuzzi': 'ג\'קוזי פרטי',
     'amenity.pool': 'בריכה',
@@ -66,7 +68,7 @@ const translations = {
     'amenity.view': 'נוף',
     'amenity.quiet': 'שקט',
     'amenity.service_24_7': 'שירות 24/7',
-    
+
     // Booking Flow
     'booking.dates_guests': 'תאריכים ואורחים',
     'booking.contact_details': 'פרטי יצירת קשר',
@@ -103,7 +105,7 @@ const translations = {
     'booking.finish': 'סיום',
     'booking.whatsapp': 'שלח פרטים בWhatsApp',
     'booking.download_pdf': 'הורד אישור PDF',
-    
+
     // Host Dashboard
     'host.hello': 'שלום, {name}',
     'host.add_property': 'הוסף צימר',
@@ -135,7 +137,7 @@ const translations = {
     'host.reject_booking': 'דחה',
     'host.calendar_coming_soon': 'לוח השנה יגיע בקרוב',
     'host.calendar_description': 'כאן תוכל לנהל את זמינות הצימרים שלך',
-    
+
     // Add Property
     'add_property.basic_details': 'פרטי בסיס',
     'add_property.photos': 'תמונות',
@@ -184,7 +186,7 @@ const translations = {
     'add_property.start_earning_desc': 'קבל הזמנות ותתחיל להרוויח כסף',
     'add_property.back_to_dashboard': 'חזור לדשבורד',
     'add_property.add_another': 'הוסף צימר נוסף',
-    
+
     // Placeholders and other
     'favorites.title': 'המועדפים שלי',
     'favorites.empty': 'עדיין לא שמרת צימרים למועדפים',
@@ -194,7 +196,11 @@ const translations = {
     'common.nights': 'לילות',
     'common.night': 'לילה',
     'common.guests': 'אורחים',
-    'common.guest': 'אורח'
+    'common.guest': 'אורח',
+    'common.done': 'סיום',
+    'common.loading': 'טוען…',
+    'common.error': 'שגיאה',
+    'common.failed_to_load': 'נכשל בטעינה',
   },
   en: {
     // Layout
@@ -203,7 +209,7 @@ const translations = {
     'layout.favorites': 'Favorites',
     'layout.host': 'Host',
     'layout.profile': 'Profile',
-    
+
     // Search Screen
     'search.where_to_go': 'Where would you like to go?',
     'search.where': 'Where',
@@ -214,7 +220,9 @@ const translations = {
     'search.per_night': '/ night',
     'search.reviews': 'reviews',
     'search.new': 'New',
-    
+    'search.clear': 'Clear',
+    'search.guests': 'Guests',
+
     // Categories
     'category.romantic': 'Romantic',
     'category.family': 'Family-friendly',
@@ -222,7 +230,7 @@ const translations = {
     'category.luxury': 'Luxury',
     'category.view': 'View',
     'category.jacuzzi': 'Jacuzzi',
-    
+
     // Property Detail
     'property.up_to_guests': 'Up to {count} guests',
     'property.min_nights': 'Minimum {count} nights',
@@ -235,7 +243,7 @@ const translations = {
     'property.reviews_title': 'Reviews ({count})',
     'property.show_all': 'Show all',
     'property.book_now': 'Book Now',
-    
+
     // Amenities
     'amenity.private_jacuzzi': 'Private Jacuzzi',
     'amenity.pool': 'Pool',
@@ -252,7 +260,7 @@ const translations = {
     'amenity.view': 'View',
     'amenity.quiet': 'Quiet',
     'amenity.service_24_7': '24/7 Service',
-    
+
     // Booking Flow
     'booking.dates_guests': 'Dates & Guests',
     'booking.contact_details': 'Contact Details',
@@ -289,7 +297,7 @@ const translations = {
     'booking.finish': 'Finish',
     'booking.whatsapp': 'Send details via WhatsApp',
     'booking.download_pdf': 'Download PDF confirmation',
-    
+
     // Host Dashboard
     'host.hello': 'Hello, {name}',
     'host.add_property': 'Add Property',
@@ -321,7 +329,7 @@ const translations = {
     'host.reject_booking': 'Reject',
     'host.calendar_coming_soon': 'Calendar coming soon',
     'host.calendar_description': 'Here you\'ll be able to manage your property availability',
-    
+
     // Add Property
     'add_property.basic_details': 'Basic Details',
     'add_property.photos': 'Photos',
@@ -370,7 +378,7 @@ const translations = {
     'add_property.start_earning_desc': 'Receive bookings and start earning money',
     'add_property.back_to_dashboard': 'Back to dashboard',
     'add_property.add_another': 'Add another property',
-    
+
     // Placeholders and other
     'favorites.title': 'My Favorites',
     'favorites.empty': 'You haven\'t saved any properties to favorites yet',
@@ -380,29 +388,33 @@ const translations = {
     'common.nights': 'nights',
     'common.night': 'night',
     'common.guests': 'guests',
-    'common.guest': 'guest'
+    'common.guest': 'guest',
+    'common.done': 'Done',
+    'common.loading': 'Loading…',
+    'common.error': 'Error',
+    'common.failed_to_load': 'Failed to load',
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('he');
-  
+  const [language, setLanguage] = useState<Language>('en');
+
   const t = (key: string, params?: Record<string, string | number>) => {
     let text = translations[language][key as keyof typeof translations[Language]] || key;
-    
+
     if (params) {
       Object.entries(params).forEach(([paramKey, value]) => {
         text = text.replace(`{${paramKey}}`, String(value));
       });
     }
-    
+
     return text;
   };
-  
+
   const isRTL = language === 'he';
-  
+
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, isRTL }}>
       {children}
