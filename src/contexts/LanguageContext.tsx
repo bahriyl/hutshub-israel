@@ -51,6 +51,7 @@ const translations = {
     'property.reviews_title': 'ביקורות ({count})',
     'property.show_all': 'הצג הכל',
     'property.book_now': 'הזמן עכשיו',
+    'property.property': 'נכס',
 
     // Amenities
     'amenity.private_jacuzzi': 'ג\'קוזי פרטי',
@@ -83,7 +84,7 @@ const translations = {
     'booking.email': 'אימייל',
     'booking.important_info': 'חשוב לדעת',
     'booking.cancellation_policy': 'ביטול חינם עד 24 שעות לפני התאריך',
-    'booking.checkin_time': 'צ\'ק-אין: 16:00 - 20:00',
+    'booking.checkin_time': 'צ\'ק-אין: 16:00 - 20:0',
     'booking.checkout_time': 'צ\'ק-אאוט: עד 11:00',
     'booking.smoking_policy': 'מותר עישון רק במרפסת',
     'booking.select_payment': 'בחר אמצעי תשלום',
@@ -243,6 +244,7 @@ const translations = {
     'property.reviews_title': 'Reviews ({count})',
     'property.show_all': 'Show all',
     'property.book_now': 'Book Now',
+    'property.property': 'Property',
 
     // Amenities
     'amenity.private_jacuzzi': 'Private Jacuzzi',
@@ -275,8 +277,8 @@ const translations = {
     'booking.email': 'Email',
     'booking.important_info': 'Important to know',
     'booking.cancellation_policy': 'Free cancellation up to 24 hours before the date',
-    'booking.checkin_time': 'Check-in: 4:00 PM - 8:00 PM',
-    'booking.checkout_time': 'Check-out: until 11:00 AM',
+    'booking.checkin_time': 'Check-in',
+    'booking.checkout_time': 'Check-out',
     'booking.smoking_policy': 'Smoking allowed only on the terrace',
     'booking.select_payment': 'Select payment method',
     'booking.credit_card': 'Credit Card',
@@ -289,7 +291,7 @@ const translations = {
     'booking.dates': 'Dates:',
     'booking.total': 'Total:',
     'booking.price_summary': 'Price summary',
-    'booking.nights': 'nights',
+    'booking.nights': 'Nights',
     'booking.cleaning_fee': 'Cleaning fee',
     'booking.service_fee': 'Service fee',
     'booking.continue': 'Continue',

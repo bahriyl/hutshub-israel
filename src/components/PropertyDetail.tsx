@@ -63,6 +63,9 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
   const touchStartX = useRef<number | null>(null);
   const touchDeltaX = useRef(0);
 
+  const [shareBusy, setShareBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   // Мапа іконок зручностей (матчимо по локалізованих рядках)
   const amenityMap = useMemo<
     Array<{ keys: string[]; icon: AmenityIcon; i18nKey: string }>
@@ -106,6 +109,37 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowLeft') gotoPrev();
     if (e.key === 'ArrowRight') gotoNext();
+  }
+
+  async function onShare() {
+    try {
+      setShareBusy(true);
+      const url = window.location.href; // current property deep-link
+      const title = data?.title || 'Property';
+      const text = `${title} – ${data?.location ?? ''}`;
+
+      if (navigator.share && window.isSecureContext) {
+        // Native share (iOS/Android + some desktop browsers)
+        await navigator.share({ title, text, url });
+      } else if (navigator.clipboard && window.isSecureContext) {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } else {
+        // Old fallback: prompt selection
+        const tmp = document.createElement('textarea');
+        tmp.value = url;
+        document.body.appendChild(tmp);
+        tmp.select();
+        try { document.execCommand('copy'); } catch { }
+        document.body.removeChild(tmp);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
+    } finally {
+      setShareBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -188,7 +222,7 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
             <ArrowRight className="w-5 h-5" />
           </Button>
           <div className="flex gap-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={onShare} disabled={shareBusy} aria-label="Share">
               <Share className="w-5 h-5" />
             </Button>
             <Button variant="ghost" size="icon">

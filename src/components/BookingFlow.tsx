@@ -20,6 +20,12 @@ interface Property {
   amenities?: string[];
   maxGuests?: number;
   minNights?: number;
+  cancellationPolicy?: string;
+  smokingPolicy?: string;
+  checkinTime?: string;   // e.g. "15:00"
+  checkoutTime?: string;  // e.g. "11:00"
+  cleaningFee?: number;
+  serviceFee?: number;
 }
 
 interface BookingFlowProps {
@@ -104,8 +110,8 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
   const checkOutDate = new Date(bookingData.checkOut);
   const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
   const subtotal = property ? property.price * nights : 0;
-  const cleaningFee = 80;
-  const serviceFee = 45;
+  const cleaningFee = property?.cleaningFee ?? 0;
+  const serviceFee = property?.serviceFee ?? 0;
   const total = subtotal + cleaningFee + serviceFee;
 
   const steps = [
@@ -198,7 +204,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
             <Card className="p-4">
               <h3 className="font-medium mb-1" dir={isRTL ? 'rtl' : 'ltr'}>{t('booking.select_dates')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                <div className="flex-[0_0_auto] w-[11.5rem]">
                   <Label htmlFor="checkin">{t('booking.checkin')}</Label>
                   <div className="relative">
                     <Calendar className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
@@ -208,11 +214,12 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
                       value={bookingData.checkIn}
                       min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => updateBookingData({ checkIn: e.target.value })}
-                      className={isRTL ? 'pr-10' : 'pl-10'}
+                      className={`${isRTL ? 'pr-10' : 'pl-10'} w-full appearance-none`}
                     />
                   </div>
                 </div>
-                <div>
+
+                <div className="flex-[0_0_auto] w-[11.5rem]">
                   <Label htmlFor="checkout">{t('booking.checkout')}</Label>
                   <div className="relative">
                     <Calendar className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
@@ -222,7 +229,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
                       value={bookingData.checkOut}
                       min={bookingData.checkIn}
                       onChange={(e) => updateBookingData({ checkOut: e.target.value })}
-                      className={isRTL ? 'pr-10' : 'pl-10'}
+                      className={`${isRTL ? 'pr-10' : 'pl-10'} w-full appearance-none`}
                     />
                   </div>
                 </div>
@@ -318,13 +325,29 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
             </Card>
 
             <Card className="p-4">
-              <h4 className="font-medium mb-2" dir={isRTL ? 'rtl' : 'ltr'}>{t('booking.important_info')}</h4>
-              <ul className="text-sm text-muted-foreground space-y-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                <li>• {t('booking.cancellation_policy')}</li>
-                <li>• {t('booking.checkin_time')}</li>
-                <li>• {t('booking.checkout_time')}</li>
-                <li>• {t('booking.smoking_policy')}</li>
-              </ul>
+              <h4 className="font-medium mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
+                {t('booking.important_info')}
+              </h4>
+
+              {(() => {
+                const cancel = property.cancellationPolicy || 'Cancellation policy not specified';
+                const checkin = property.checkinTime
+                  ? `${t('booking.checkin_time')}: ${property.checkinTime}`
+                  : t('booking.checkin_time');
+                const checkout = property.checkoutTime
+                  ? `${t('booking.checkout_time')}: ${property.checkoutTime}`
+                  : t('booking.checkout_time');
+                const smoking = property.smokingPolicy || t('booking.smoking_policy');
+
+                return (
+                  <ul className="text-sm text-muted-foreground space-y-1" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <li>• {cancel}</li>
+                    <li>• {checkin}</li>
+                    <li>• {checkout}</li>
+                    <li>• {smoking}</li>
+                  </ul>
+                );
+              })()}
             </Card>
           </div>
         );
@@ -383,9 +406,9 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
             </Card>
 
             <Card className="p-4">
-              <h4 className="font-medium mb-2" dir={isRTL ? 'rtl' : 'ltr'}>{t('booking.cancellation_terms')}</h4>
+              <h4 className="font-medium mb-1" dir={isRTL ? 'rtl' : 'ltr'}>{t('booking.cancellation_terms')}</h4>
               <p className="text-sm text-muted-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-                {t('booking.cancellation_description')}
+                {property.cancellationPolicy || 'Cancellation policy not specified'}
               </p>
             </Card>
           </div>
@@ -417,7 +440,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
                   <span>{property.title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('booking.dates')}:</span>
+                  <span>{t('booking.dates')}</span>
                   <span>{formatDate(bookingData.checkIn)} - {formatDate(bookingData.checkOut)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -430,7 +453,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between font-medium">
-                  <span>{t('booking.total')}:</span>
+                  <span>{t('booking.total')}</span>
                   <span>₪{total}</span>
                 </div>
               </div>
@@ -464,8 +487,8 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
               <div
                 key={step.number}
                 className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${step.number <= currentStep
-                    ? 'bg-green-600 text-white'
-                    : 'bg-muted text-muted-foreground'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-muted text-muted-foreground'
                   }`}
               >
                 {step.number < currentStep ? <Check className="w-4 h-4" /> : step.number}
