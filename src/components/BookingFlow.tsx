@@ -8,22 +8,36 @@ import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { useLanguage } from '../contexts/LanguageContext';
 
+type Localized = string | { en?: string; he?: string };
+type LocalizedArray = string[] | { en?: string[]; he?: string[] };
+
+interface LocationShape {
+  displayName?: Localized;
+  geo?: { type: 'Point'; coordinates: [number, number] };
+  en?: string; he?: string;
+}
+
 interface Property {
   _id: string;
-  title: string;
-  location: string;
+  title: Localized;
+  location?: LocationShape | Localized;
   price: number;
-  rating: number;
-  reviewCount: number;
+  rating?: number;
+  reviewCount?: number;
   image?: string;
   images?: string[];
-  amenities?: string[];
+
+  description?: Localized;
+  amenities?: LocalizedArray;
+
   maxGuests?: number;
   minNights?: number;
-  cancellationPolicy?: string;
-  smokingPolicy?: string;
-  checkinTime?: string;   // e.g. "15:00"
-  checkoutTime?: string;  // e.g. "11:00"
+
+  cancellationPolicy?: Localized;
+  smokingPolicy?: Localized;
+  checkinTime?: string;
+  checkoutTime?: string;
+
   cleaningFee?: number;
   serviceFee?: number;
 }
@@ -47,6 +61,28 @@ interface BookingData {
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+function pickLabel(val: Localized | undefined, lang: 'en' | 'he'): string {
+  if (val == null) return '';
+  if (typeof val === 'string') return val;
+  return val[lang] ?? val.en ?? val.he ?? '';
+}
+
+function pickArray(val: LocalizedArray | undefined, lang: 'en' | 'he'): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return val[lang] ?? val.en ?? val.he ?? [];
+}
+
+function pickLocationDisplay(loc: Property['location'], lang: 'en' | 'he'): string {
+  if (!loc) return '';
+  if (typeof loc === 'string') return loc;
+  if ('displayName' in loc && loc.displayName) {
+    return pickLabel(loc.displayName, lang);
+  }
+  // legacy `{en,he}` or plain string stored under 'location'
+  return pickLabel(loc as Localized, lang);
+}
+
 export function BookingFlow({ propertyId, property: initialProperty, onBack, onComplete }: BookingFlowProps) {
   const { t, isRTL } = useLanguage();
   const [currentStep, setCurrentStep] = useState(1);
@@ -60,6 +96,21 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
   tomorrow.setDate(today.getDate() + 1);
   const dayAfter = new Date(today);
   dayAfter.setDate(today.getDate() + 2);
+
+  const lang: 'en' | 'he' = isRTL ? 'he' : 'en';
+
+  const titleStr = pickLabel(property?.title, lang);
+  const locationStr = pickLocationDisplay(property?.location, lang);
+  const amenitiesRaw = pickArray(property?.amenities, lang);
+
+  const cleaningFee = typeof property?.cleaningFee === 'number' ? property!.cleaningFee : 0;
+  const serviceFee = typeof property?.serviceFee === 'number' ? property!.serviceFee : 0;
+
+  const cancelStr = pickLabel(property?.cancellationPolicy, lang) || t('booking.cancellation_policy');
+  const smokingStr = pickLabel(property?.smokingPolicy, lang) || t('booking.smoking_policy');
+  const checkinStr = property?.checkinTime ? `${t('booking.checkin_time')}: ${property.checkinTime}` : t('booking.checkin_time');
+  const checkoutStr = property?.checkoutTime ? `${t('booking.checkout_time')}: ${property.checkoutTime}` : t('booking.checkout_time');
+
 
   const [bookingData, setBookingData] = useState<BookingData>({
     checkIn: tomorrow.toISOString().split('T')[0],
@@ -110,8 +161,6 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
   const checkOutDate = new Date(bookingData.checkOut);
   const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
   const subtotal = property ? property.price * nights : 0;
-  const cleaningFee = property?.cleaningFee ?? 0;
-  const serviceFee = property?.serviceFee ?? 0;
   const total = subtotal + cleaningFee + serviceFee;
 
   const steps = [
@@ -328,27 +377,14 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
               <h4 className="font-medium mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
                 {t('booking.important_info')}
               </h4>
-
-              {(() => {
-                const cancel = property.cancellationPolicy || 'Cancellation policy not specified';
-                const checkin = property.checkinTime
-                  ? `${t('booking.checkin_time')}: ${property.checkinTime}`
-                  : t('booking.checkin_time');
-                const checkout = property.checkoutTime
-                  ? `${t('booking.checkout_time')}: ${property.checkoutTime}`
-                  : t('booking.checkout_time');
-                const smoking = property.smokingPolicy || t('booking.smoking_policy');
-
-                return (
-                  <ul className="text-sm text-muted-foreground space-y-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <li>• {cancel}</li>
-                    <li>• {checkin}</li>
-                    <li>• {checkout}</li>
-                    <li>• {smoking}</li>
-                  </ul>
-                );
-              })()}
+              <ul className="text-sm text-muted-foreground space-y-1" dir={isRTL ? 'rtl' : 'ltr'}>
+                <li>• {cancelStr}</li>
+                <li>• {checkinStr}</li>
+                <li>• {checkoutStr}</li>
+                <li>• {smokingStr}</li>
+              </ul>
             </Card>
+
           </div>
         );
 
@@ -408,7 +444,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
             <Card className="p-4">
               <h4 className="font-medium mb-1" dir={isRTL ? 'rtl' : 'ltr'}>{t('booking.cancellation_terms')}</h4>
               <p className="text-sm text-muted-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-                {property.cancellationPolicy || 'Cancellation policy not specified'}
+                {cancelStr}
               </p>
             </Card>
           </div>
@@ -437,7 +473,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
                 </div>
                 <div className="flex justify-between">
                   <span>{t('property.property')}:</span>
-                  <span>{property.title}</span>
+                  <span>{titleStr}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('booking.dates')}</span>
@@ -512,7 +548,7 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
               {property.image || (property.images && property.images[0]) ? (
                 <img
                   src={property.image || property.images![0]}
-                  alt={property.title}
+                  alt={titleStr || 'Property'}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -520,12 +556,12 @@ export function BookingFlow({ propertyId, property: initialProperty, onBack, onC
               )}
             </div>
             <div className="flex-1">
-              <h3 className="font-medium" dir={isRTL ? 'rtl' : 'ltr'}>{property.title}</h3>
-              <p className="text-sm text-muted-foreground" dir={isRTL ? 'rtl' : 'ltr'}>{property.location}</p>
+              <h3 className="font-medium" dir={isRTL ? 'rtl' : 'ltr'}>{titleStr}</h3>
+              <p className="text-sm text-muted-foreground" dir={isRTL ? 'rtl' : 'ltr'}>{locationStr}</p>
               <div className="flex items-center gap-2 mt-1">
-                {property.amenities?.slice(0, 2).map((amenity, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {amenity}
+                {amenitiesRaw.slice(0, 2).map((a, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">
+                    {a}
                   </Badge>
                 ))}
               </div>

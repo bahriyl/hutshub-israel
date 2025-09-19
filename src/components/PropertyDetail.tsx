@@ -15,42 +15,83 @@ interface PropertyDetailProps {
 }
 
 type AmenityIcon = (props: { className?: string }) => JSX.Element;
+type Localized = string | { en?: string; he?: string };
+type LocalizedArray = string[] | { en?: string[]; he?: string[] };
 
-// Відповідь від бекенда для деталки
+interface LocationShape {
+  displayName?: Localized;
+  geo?: { type: 'Point'; coordinates: [number, number] };
+  en?: string; he?: string;
+}
+
 interface ApiProperty {
   _id: string;
-  title: string;
-  location: string;
+  title: Localized;
+  location?: LocationShape | Localized;
   price: number;
-  rating: number;
-  reviewCount: number;
-  image?: string;          // одиночне зображення з API
-  images?: string[];       // опційно, якщо додасте в API пізніше
-  amenities?: string[];    // локалізовані назви (en/he) з API
+  rating?: number;
+  reviewCount?: number;
+  image?: string;
+  images?: string[];
+
+  description?: Localized;
+  amenities?: LocalizedArray;
   isNew?: boolean;
-  // опційні розширення на майбутнє:
-  description?: string;
+
   maxGuests?: number;
   minNights?: number;
+
+  cancellationPolicy?: Localized;
+  smokingPolicy?: Localized;
+  checkinTime?: string;
+  checkoutTime?: string;
+
+  cleaningFee?: number;
+  serviceFee?: number;
+
   host?: {
-    name: string;
+    name?: Localized;
     avatar?: string;
     rating?: number;
-    responseTime?: string;
+    responseTime?: Localized;
     isVerified?: boolean;
   };
+
   reviews?: Array<{
-    id: string | number;
-    user: string;
+    id?: string | number;
+    user?: Localized;
     rating: number;
     date: string;
-    comment: string;
+    comment?: Localized;
   }>;
 }
 
 const SWIPE_THRESHOLD = 40;
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+function pickLabel(val: Localized | undefined, lang: 'en' | 'he'): string {
+  if (val == null) return '';
+  if (typeof val === 'string') return val;
+  return val[lang] ?? val.en ?? val.he ?? '';
+}
+
+function pickArray(val: LocalizedArray | undefined, lang: 'en' | 'he'): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return val[lang] ?? val.en ?? val.he ?? [];
+}
+
+// location can be the new shape or legacy
+function pickLocationDisplay(loc: ApiProperty['location'], lang: 'en' | 'he'): string {
+  if (!loc) return '';
+  if (typeof loc === 'string') return loc;
+  if ('displayName' in loc && loc.displayName) {
+    return pickLabel(loc.displayName, lang);
+  }
+  // legacy location {en,he}
+  return pickLabel(loc as Localized, lang);
+}
 
 export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetailProps) {
   const { t, isRTL } = useLanguage();
@@ -65,6 +106,26 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
 
   const [shareBusy, setShareBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const lang: 'en' | 'he' = isRTL ? 'he' : 'en';
+
+  const titleStr = pickLabel(data?.title, lang);
+  const descStr = pickLabel(data?.description, lang);
+  const locationStr = pickLocationDisplay(data?.location, lang);
+
+  const cleaningFee = typeof data?.cleaningFee === 'number' ? data!.cleaningFee : 0;
+  const serviceFee = typeof data?.serviceFee === 'number' ? data!.serviceFee : 0;
+
+  const cancellationStr = pickLabel(data?.cancellationPolicy, lang);
+  const smokingStr = pickLabel(data?.smokingPolicy, lang);
+  const checkin = data?.checkinTime || '';
+  const checkout = data?.checkoutTime || '';
+
+  const hostNameStr = pickLabel(data?.host?.name, lang);
+  const hostRTStr = pickLabel(data?.host?.responseTime, lang);
+
+  // amenities: accept {en/he} or []
+  const amenitiesRaw: string[] = pickArray(data?.amenities, lang);
 
   // Мапа іконок зручностей (матчимо по локалізованих рядках)
   const amenityMap = useMemo<
@@ -115,8 +176,8 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
     try {
       setShareBusy(true);
       const url = window.location.href; // current property deep-link
-      const title = data?.title || 'Property';
-      const text = `${title} – ${data?.location ?? ''}`;
+      const title = titleStr || 'Property';
+      const text = `${titleStr} – ${locationStr}`;
 
       if (navigator.share && window.isSecureContext) {
         // Native share (iOS/Android + some desktop browsers)
@@ -175,17 +236,14 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
   }, [data]);
 
   const amenitiesForRender = useMemo(() => {
-    const list = (data?.amenities ?? []).slice(0, 12);
+    const list = amenitiesRaw.slice(0, 12);
     return list.map((a) => {
       const key = (a || '').toString().toLowerCase();
       const found = amenityMap.find((row) => row.keys.some((k) => key.includes(k.toLowerCase())));
-      if (found) {
-        return { icon: found.icon, label: t(found.i18nKey) };
-      }
-      // fallback — невідомі зручності
+      if (found) return { icon: found.icon, label: t(found.i18nKey) };
       return { icon: HelpCircle, label: a };
     });
-  }, [data?.amenities, amenityMap, t]);
+  }, [amenitiesRaw, amenityMap, t]);
 
   if (loading) {
     return (
@@ -294,7 +352,7 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
         <div className="mb-6">
           <div className="flex justify-between items-start mb-2">
             <h1 className="text-2xl font-semibold text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-              {data.title}
+              {titleStr}
             </h1>
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -305,7 +363,7 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
 
           <div className="flex items-center gap-2 text-muted-foreground mb-4">
             <MapPin className="w-4 h-4" />
-            <span dir={isRTL ? 'rtl' : 'ltr'}>{data.location}</span>
+            <span dir={isRTL ? 'rtl' : 'ltr'}>{locationStr}</span>
           </div>
 
           {(data.maxGuests || data.minNights) && (
@@ -322,10 +380,10 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
         </div>
 
         {/* Description */}
-        {data.description && (
+        {descStr && (
           <Card className="p-4 mb-6">
             <p className="text-foreground leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
-              {data.description}
+              {descStr}
             </p>
           </Card>
         )}
@@ -352,12 +410,12 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={data.host.avatar} />
-                  <AvatarFallback>{data.host.name?.charAt(0) || '?'}</AvatarFallback>
+                  <AvatarFallback>{hostNameStr?.charAt(0) || '?'}</AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium" dir={isRTL ? 'rtl' : 'ltr'}>
-                      {t('property.host', { name: data.host.name })}
+                      {t('property.host', { name: hostNameStr })}
                     </h4>
                     {data.host.isVerified && (
                       <Badge variant="secondary" className="text-xs">{t('property.verified')}</Badge>
@@ -371,9 +429,7 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
                         <span>•</span>
                       </>
                     )}
-                    {data.host.responseTime && (
-                      <span>{t('property.responds_within', { time: data.host.responseTime })}</span>
-                    )}
+                    {hostRTStr && <span>{t('property.responds_within', { time: hostRTStr })}</span>}
                   </div>
                 </div>
               </div>
@@ -402,7 +458,9 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{review.user}</span>
+                        <span className="font-medium text-sm">
+                          {pickLabel(review.user as Localized, lang)}
+                        </span>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: review.rating || 0 }).map((_, i) => (
                             <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -412,7 +470,9 @@ export function PropertyDetail({ propertyId, onBack, onBooking }: PropertyDetail
                       <span className="text-xs text-muted-foreground">{review.date}</span>
                     </div>
                   </div>
-                  <p className="text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>{review.comment}</p>
+                  <p className="text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                    {pickLabel(review.comment as Localized, lang)}
+                  </p>
                   {idx !== Math.min(1, data.reviews.length - 1) && <Separator className="mt-4" />}
                 </div>
               ))}

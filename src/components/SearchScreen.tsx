@@ -15,6 +15,10 @@ interface SearchScreenProps {
 
 type Amenity = string;
 
+type Place = { lat: number; lon: number; display: string };
+type PlaceSug = { lat: number; lon: number; display: string };
+type PropSug = { _id: string; title: any /* string | {en,he} */; image?: string };
+
 export interface Property {
   _id: string;                      // повертаємо з бекенда як рядок
   title: string;
@@ -50,6 +54,40 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
   const [whenOpen, setWhenOpen] = useState(false);
   const [guestsOpen, setGuestsOpen] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
+
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(50);
+
+  const [placeQ, setPlaceQ] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<{ lat: number; lon: number; display: string }>>([]);
+
+  const lang = isRTL ? 'he' : 'en';
+
+  const [openSug, setOpenSug] = useState(false);
+  const [placeSug, setPlaceSug] = useState<PlaceSug[]>([]);
+  const [propSug, setPropSug] = useState<PropSug[]>([]);
+  const inputWrapRef = useRef<HTMLDivElement | null>(null);
+  const [sugRect, setSugRect] = useState<{ top: number; left: number; width: number; } | null>(null);
+
+  function updateSugRect() {
+    const el = inputWrapRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setSugRect({ top: r.bottom + 8, left: r.left, width: r.width }); // +8px gap
+  }
+
+  useEffect(() => {
+    if (!openSug) return;
+    updateSugRect();
+    const onScroll = () => updateSugRect();
+    const onResize = () => updateSugRect();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [openSug]);
 
   // (опціонально) базові категорії залишаємо як є або теж переведемо на API пізніше
   const categories = [
@@ -91,6 +129,54 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
     return () => ctrl.abort();
   }, [debouncedQuery, isRTL]);
 
+  // Combined suggestions (Places + Property titles)
+  useEffect(() => {
+    let ignore = false;
+    const q = searchQuery.trim();
+    if (!q) {
+      setPlaceSug([]); setPropSug([]); setOpenSug(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        // 1) Places
+        const placesReq = fetch(
+          `${API_URL}/places/autocomplete?q=${encodeURIComponent(q)}&lang=${lang}&limit=5`
+        ).then(r => r.ok ? r.json() : []);
+
+        // 2) Properties-by-title
+        // Preferred: a lightweight endpoint (fast):
+        //   GET /properties/autocomplete?q=... -> [{_id, title, image?}]
+        // If you don’t have it yet, we can temporarily hit /properties with small limit.
+        const propsReq = fetch(
+          `${API_URL}/autocomplete/properties?q=${encodeURIComponent(q)}&lang=${lang}&limit=7`
+        ).then(r => r.ok ? r.json() : [])
+          .catch(async () => {
+            // fallback to regular list (heavier, but works until you add the endpoint)
+            const rs = await fetch(`${API_URL}/properties?q=${encodeURIComponent(q)}&lang=${lang}&limit=7`);
+            if (!rs.ok) return [];
+            const d = await rs.json();
+            // map to minimal shape
+            return (d.items || []).map((p: any) => ({ _id: p._id, title: p.title, image: p.image }));
+          });
+
+        const [places, props] = await Promise.all([placesReq, propsReq]);
+        if (ignore) return;
+
+        setPlaceSug(Array.isArray(places) ? places : []);
+        setPropSug(Array.isArray(props) ? props : []);
+        setOpenSug(true);
+      } catch {
+        if (!ignore) {
+          setPlaceSug([]); setPropSug([]); setOpenSug(false);
+        }
+      }
+    }, 200);
+
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [searchQuery, lang, API_URL]);
+
   function prettyDateRange(s: string | null, e: string | null) {
     if (!s && !e) return '';
     if (s && !e) return s;          // still short
@@ -102,6 +188,31 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
     return '';
   }
 
+  function pickLabel(val: any, lang: 'en' | 'he'): string {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    // support shape: { en, he }
+    if (typeof val === 'object' && (val.en || val.he)) {
+      return val[lang] ?? val.en ?? val.he ?? '';
+    }
+    // support shape: { displayName: { en, he } }
+    if (typeof val === 'object' && val.displayName) {
+      const dn = val.displayName;
+      if (typeof dn === 'string') return dn;
+      if (dn?.en || dn?.he) return dn[lang] ?? dn.en ?? dn.he ?? '';
+    }
+    return String(val ?? '');
+  }
+
+  function normalizePlaceDisplay(s: string) {
+    const parts = s.split(',').map(p => p.trim());
+    const out: string[] = [];
+    for (const p of parts) {
+      if (out.at(-1)?.toLowerCase() !== p.toLowerCase()) out.push(p);
+    }
+    return out.join(', ');
+  }
+
   // Triggered when user presses Enter in search input
   async function triggerImmediateFetch() {
     // we reuse the same fetch logic as useEffect, but avoid waiting for debounce
@@ -109,18 +220,32 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
   }
 
   // centralised fetch wrapper so both useEffect and manual trigger use same code
-  async function fetchProperties(params: { q?: string; start?: string | null; end?: string | null; guests?: number; offset?: number; limit?: number } = {}) {
+  async function fetchProperties(params: {
+    q?: string;
+    skipQ?: boolean;
+    start?: string | null;
+    end?: string | null;
+    guests?: number;
+    offset?: number;
+    limit?: number;
+  } = {}) {
     const ctrl = new AbortController();
     try {
       setLoading(true);
       setError(null);
       const qs = new URLSearchParams();
       const q = params.q ?? debouncedQuery;
-      if (q) qs.set('q', q);
+      if (!params.skipQ && q && !selectedPlace) {
+        qs.set('q', q);
+      }
       if (params.start ?? startDate) qs.set('start', (params.start ?? startDate) as string);
       if (params.end ?? endDate) qs.set('end', (params.end ?? endDate) as string);
       if (typeof (params.guests ?? guests) === 'number') qs.set('guests', String(params.guests ?? guests));
       if (category) qs.set('category', category);
+      if (selectedPlace) {
+        qs.set('near', `${selectedPlace.lat},${selectedPlace.lon}`);
+        qs.set('radiusKm', String(radiusKm));
+      }
       qs.set('limit', String(params.limit ?? 30));
       qs.set('offset', String(params.offset ?? 0));
       qs.set('lang', isRTL ? 'he' : 'en');
@@ -190,7 +315,7 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
     return () => {
       // no-op; fetchProperties uses its own controller
     };
-  }, [debouncedQuery, startDate, endDate, guests, isRTL, category]);
+  }, [debouncedQuery, startDate, endDate, guests, isRTL, category, selectedPlace, radiusKm]);
 
   useEffect(() => {
     const anyOpen = whereOpen || whenOpen || guestsOpen;
@@ -201,21 +326,158 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
     }
   }, [whereOpen, whenOpen, guestsOpen]);
 
+  useEffect(() => {
+    if (whereOpen || whenOpen || guestsOpen) setOpenSug(false);
+  }, [whereOpen, whenOpen, guestsOpen]);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const el = inputWrapRef.current;
+      if (el && !el.contains(e.target as Node)) setOpenSug(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  useEffect(() => {
+    if (selectedPlace) {
+      const display = normalizePlaceDisplay(selectedPlace.display);
+      setWhere(display);
+      setSearchQuery(display);
+    }
+  }, [selectedPlace]);
+
   return (
     <div className="pb-20 sm:pb-4" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-border">
         <div className="max-w-7xl mx-auto">
           {/* Search Bar */}
-          <div className="relative mb-4">
+          <div className="relative mb-4" ref={inputWrapRef}>
             <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5`} />
             <Input
+              /* ref={inputRef}  ⟵ remove this line */
               placeholder={t('search.where_to_go')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setOpenSug(true); }}
+              onFocus={() => { if ((placeSug.length || propSug.length) && searchQuery.trim()) setOpenSug(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setOpenSug(false);
+                  if (selectedPlace) {
+                    // place search: send only near/radius, not q
+                    fetchProperties({ skipQ: true });
+                  } else {
+                    // title search: send q
+                    fetchProperties({ q: searchQuery });
+                  }
+                }
+                if (e.key === 'Escape') setOpenSug(false);
+              }}
               className={isRTL ? 'pr-10 text-right' : 'pl-10 text-left'}
               dir={isRTL ? 'rtl' : 'ltr'}
+              aria-autocomplete="list"
+              aria-expanded={openSug}
+              aria-controls="search-suggestions"
             />
+
+            {/* Suggestions dropdown */}
+            {openSug && (placeSug.length > 0 || propSug.length > 0) && sugRect &&
+              createPortal(
+                <div
+                  id="search-suggestions"
+                  className="fixed z-[10050] max-h-96 overflow-auto rounded-xl border bg-white shadow-xl"
+                  role="listbox"
+                  style={{ top: sugRect.top, left: sugRect.left, width: sugRect.width }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();   // <— this keeps the global mousedown closer from firing
+                  }}
+                >
+                  {/* Places */}
+                  {placeSug.length > 0 && (
+                    <div className="py-2">
+                      <div className="px-3 pb-1 text-xs font-medium text-muted-foreground">{t('search.places')}</div>
+                      {placeSug.map((p, i) => (
+                        <button
+                          key={`place-${p.lat}-${p.lon}-${i}`}
+                          className="flex w-full items-center gap-2 px-3 py-2 hover:bg-muted"
+                          role="option"
+                          onClick={() => {
+                            const display = normalizePlaceDisplay(p.display);
+                            setSelectedPlace({ lat: p.lat, lon: p.lon, display });
+                            setWhere(display);
+                            setSearchQuery(display);
+                            setOpenSug(false);
+                            // important: DON'T pass q; explicitly skip it
+                            fetchProperties({ skipQ: true });
+                          }}
+                        >
+                          <MapPin className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{p.display}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Properties */}
+                  {propSug.length > 0 && (
+                    <div className="py-2 border-t">
+                      <div className="px-3 pb-1 text-xs font-medium text-muted-foreground">
+                        {t('search.properties')}
+                      </div>
+                      {propSug.map((p) => {
+                        const title = pickLabel(p.title, lang);
+                        return (
+                          <button
+                            key={`prop-${p._id}`}
+                            className="flex w-full items-center gap-3 px-3 py-2 hover:bg-muted"
+                            role="option"
+                            onClick={() => {
+                              const title = pickLabel(p.title, lang);
+                              setSearchQuery(title);
+                              setSelectedPlace(null);  // ensure near/radius is NOT sent
+                              setWhere('');
+                              setOpenSug(false);
+                              fetchProperties({ q: title, skipQ: false });
+                            }}
+                          >
+                            {p.image ? (
+                              <img
+                                src={p.image}
+                                alt=""
+                                className="w-10 h-10 rounded object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-muted flex-shrink-0" />
+                            )}
+                            <span className="truncate" dir={isRTL ? 'rtl' : 'ltr'}>{title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>,
+                document.body
+              )
+            }
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 mb-4">
+            {/* WHERE */}
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 h-12 w-full min-w-0 overflow-hidden"
+              onClick={() => { setWhereOpen(true); setWhenOpen(false); setGuestsOpen(false); }}
+            >
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1 min-w-0 basis-0">
+                <span className="block truncate">
+                  {selectedPlace ? `${selectedPlace.display} · ${radiusKm}km` : (where || t('search.where'))}
+                </span>
+              </span>
+            </Button>
           </div>
 
           {/* Quick Search Buttons (controlled) */}
@@ -251,22 +513,80 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
 
           {/* WHERE modal */}
           <Modal open={whereOpen} title={t('search.where')} onClose={() => setWhereOpen(false)} dir={isRTL ? 'rtl' : 'ltr'}>
+            {/* Search box */}
             <Input
               placeholder={t('search.where_to_go')}
-              value={searchQuery}
+              value={placeQ}
               autoFocus
-              onChange={(e) => { setSearchQuery(e.target.value); setWhere(e.target.value); }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setWhereOpen(false);
-                  triggerImmediateFetch?.();
-                }
-              }}
+              onChange={(e) => setPlaceQ(e.target.value)}
               className={isRTL ? 'text-right' : 'text-left'}
               dir={isRTL ? 'rtl' : 'ltr'}
             />
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setWhereOpen(false)}>{t('common.done')}</Button>
+
+            {/* Suggestions */}
+            <ul className="mt-3 max-h-56 overflow-auto divide-y rounded border">
+              {suggestions.map((s: any, i: number) => (
+                <li key={`${s.lat}-${s.lon}-${i}`}>
+                  <button
+                    className="w-full text-left px-3 py-2 hover:bg-muted"
+                    onClick={() => {
+                      setSelectedPlace({ lat: s.lat, lon: s.lon, display: s.display });
+                      setWhere(s.display);
+                      setPlaceQ(s.display);
+                    }}
+                  >
+                    {s.display}
+                  </button>
+                </li>
+              ))}
+              {!suggestions.length && !!placeQ && (
+                <li className="px-3 py-2 text-sm text-muted-foreground">{t('common.no_results')}</li>
+              )}
+            </ul>
+
+            {/* Radius picker */}
+            <div className="mt-4">
+              <label className="block text-sm mb-2">{t('search.radius')}</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={10}
+                  max={200}
+                  step={5}
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(parseInt(e.target.value, 10))}
+                  className="flex-1"
+                  aria-label="Search radius (km)"
+                />
+                <div className="w-16 text-right tabular-nums">{radiusKm} km</div>
+              </div>
+              {/* quick chips */}
+              <div className="mt-2 flex gap-2 flex-wrap">
+                {[10, 25, 50, 100, 150, 200].map(v => (
+                  <Button key={v} size="sm" variant={radiusKm === v ? 'default' : 'outline'} onClick={() => setRadiusKm(v)}>
+                    {v} km
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => { setSelectedPlace(null); setWhere(''); setPlaceQ(''); }}
+              >
+                {t('search.clear')}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setWhereOpen(false);
+                  // fetch immediately with new near/radius (if place chosen)
+                  triggerImmediateFetch?.();
+                }}
+              >
+                {t('common.done')}
+              </Button>
             </div>
           </Modal>
 
@@ -394,7 +714,7 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-medium text-foreground line-clamp-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                      {property.title}
+                      {typeof property.title === 'string' ? property.title : pickLabel(property.title, lang)}
                     </h3>
                     <div className="flex items-center gap-1 text-sm">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -403,7 +723,7 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
                   </div>
 
                   <p className="text-sm text-muted-foreground mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
-                    {property.location}
+                    {pickLabel(property.location, lang)}
                   </p>
 
                   <div className="flex flex-wrap gap-1 mb-3">
@@ -429,7 +749,7 @@ export function SearchScreen({ onPropertySelect }: SearchScreenProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
